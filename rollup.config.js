@@ -9,7 +9,7 @@ import livereload from 'rollup-plugin-livereload';
 const isProduction = process.env.NODE_ENV === 'production';
 
 export default {
-  input: './node_modules/react-router-dom/dist/index.js',
+  input: './node_modules/react-router-dom/dist/index.mjs',
   output: {
     file: 'dist/react-router-dom.umd.js',
     format: 'umd',
@@ -45,8 +45,7 @@ export default {
     }),
     commonjs(),
     babel({
-      babelHelpers: 'bundled',
-      exclude: 'node_modules/**',
+      babelHelpers: 'runtime',
       presets: [
         ['react-app', { targets: { browsers: ['> 0.5% in CN', 'last 2 versions'] } }]
       ]
