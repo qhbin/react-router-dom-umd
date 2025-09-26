@@ -1,12 +1,40 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import terser from '@rollup/plugin-terser'; // 更新导入
+import terser from '@rollup/plugin-terser';
 import babel from '@rollup/plugin-babel';
 import replace from '@rollup/plugin-replace';
 import serve from 'rollup-plugin-serve';
 import livereload from 'rollup-plugin-livereload';
+import MagicString from 'magic-string';
 
 const isProduction = process.env.NODE_ENV === 'production';
+function postReplace() {
+  return {
+    name: 'post-replace',
+    renderChunk(code, chunk, options) {
+      const magicString = new MagicString(code);
+      const pattern = /import\(/g;
+      let match;
+      
+      // 查找所有匹配项并替换
+      while ((match = pattern.exec(code))) {
+        const start = match.index;
+        const end = start + 7; // 'import('.length
+        magicString.overwrite(start, end, 'window.import(');
+      }
+      
+      // 只有当代码被修改时才返回新的 sourcemap
+      if (magicString.hasChanged()) {
+        return {
+          code: magicString.toString(),
+          map: magicString.generateMap({ hires: true })
+        };
+      }
+      
+      return null; // 没有修改，返回 null
+    }
+  };
+}
 
 export default {
   input: './node_modules/react-router-dom/dist/index.mjs',
@@ -19,7 +47,13 @@ export default {
       'react-dom': 'ReactDOM',
     },
     sourcemap: true,
-    exports: 'auto'
+    exports: 'auto',
+     intro: `
+     if(!window.import && window.dynamicImportPolyfill) {
+      window.dynamicImportPolyfill.initialize();
+      window.import = window.__import__;
+     }
+      `.trim()
   },
   onwarn(warning, warn) {
     // 忽略 use client 警告
@@ -40,6 +74,7 @@ export default {
       'process.env': '{}',
       preventAssignment: true
     }),
+    postReplace(),
     resolve({
       browser: true
     }),
